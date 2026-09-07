@@ -1,0 +1,12 @@
+{
+    "DocVersion": "1.0.0",
+    "StudioMinVersion": "2025.10.0",
+    "SolutionId": "f33c04bd-7c32-4ca3-c49f-08df081ad0bb",
+    "Projects": [
+        {
+            "Type": "Flow",
+            "ProjectRelativePath": "EmployeeExpenseApproval/project.uiproj",
+            "Id": "7b938c71-5153-45a4-9c98-dd57cec55ae2"
+        }
+    ]
+}

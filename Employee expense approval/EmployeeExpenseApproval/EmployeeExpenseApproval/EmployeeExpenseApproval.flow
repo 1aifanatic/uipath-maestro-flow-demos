@@ -1,0 +1,1905 @@
+{
+  "id": "f44e3dc2-be3b-4c7f-aab8-31dd3ec02bbb",
+  "version": "1.9",
+  "name": "EmployeeExpenseApproval",
+  "nodes": [
+    {
+      "id": "validateInput1",
+      "type": "core.action.script",
+      "typeVersion": "1.1",
+      "display": {
+        "label": "Validate Input"
+      },
+      "inputs": {
+        "script": "const input = $vars.start.output || {};\nconst errors = [];\nif (typeof input.amount !== \"number\" || isNaN(input.amount) || input.amount < 0) {\n  errors.push(\"amount is missing or not a valid non-negative number\");\n}\nif (typeof input.employeeId !== \"string\" || input.employeeId.trim() === \"\") {\n  errors.push(\"employeeId is missing or empty\");\n}\nif (typeof input.category !== \"string\" || input.category.trim() === \"\") {\n  errors.push(\"category is missing or empty\");\n}\nif (typeof input.receiptUrl !== \"string\" || input.receiptUrl.trim() === \"\") {\n  errors.push(\"receiptUrl is missing or empty\");\n}\nreturn { isValid: errors.length === 0, errors: errors };"
+      },
+      "outputs": {
+        "output": {
+          "type": "any",
+          "description": "The return value of the script",
+          "source": "=result.response",
+          "var": "output"
+        },
+        "error": {
+          "type": "object",
+          "description": "Error information if the node fails",
+          "source": "=Error",
+          "var": "error"
+        }
+      }
+    },
+    {
+      "id": "checkInputValid1",
+      "type": "core.logic.decision",
+      "typeVersion": "1.2",
+      "display": {
+        "label": "Check Input Valid"
+      },
+      "inputs": {
+        "expression": "$vars.validateInput1.output.isValid === true"
+      }
+    },
+    {
+      "id": "rejectInvalidInput1",
+      "type": "core.action.script",
+      "typeVersion": "1.1",
+      "display": {
+        "label": "Reject Invalid Input"
+      },
+      "inputs": {
+        "script": "return { status: \"Rejected\", reason: \"Invalid submission: \" + $vars.validateInput1.output.errors.join(\"; \") };"
+      },
+      "outputs": {
+        "output": {
+          "type": "any",
+          "description": "The return value of the script",
+          "source": "=result.response",
+          "var": "output"
+        },
+        "error": {
+          "type": "object",
+          "description": "Error information if the node fails",
+          "source": "=Error",
+          "var": "error"
+        }
+      }
+    },
+    {
+      "id": "checkAutoApproval1",
+      "type": "core.logic.decision",
+      "typeVersion": "1.2",
+      "display": {
+        "label": "Check Auto Approval Threshold"
+      },
+      "inputs": {
+        "expression": "$vars.start.output.amount <= 100"
+      }
+    },
+    {
+      "id": "autoApprove1",
+      "type": "core.action.script",
+      "typeVersion": "1.1",
+      "display": {
+        "label": "Auto Approve"
+      },
+      "inputs": {
+        "script": "return { status: \"Approved\", reason: \"Auto-approved: amount \" + $vars.start.output.amount + \" is at or below the $100 threshold\" };"
+      },
+      "outputs": {
+        "output": {
+          "type": "any",
+          "description": "The return value of the script",
+          "source": "=result.response",
+          "var": "output"
+        },
+        "error": {
+          "type": "object",
+          "description": "Error information if the node fails",
+          "source": "=Error",
+          "var": "error"
+        }
+      }
+    },
+    {
+      "id": "managerApproval1",
+      "type": "uipath.human-in-the-loop.quick-form",
+      "typeVersion": "1.0",
+      "display": {
+        "label": "Manager Approval"
+      },
+      "inputs": {
+        "title": "Expense Approval Required",
+        "recipient": {
+          "channels": [
+            "Email",
+            "ActionCenter"
+          ],
+          "connections": {},
+          "assignee": {
+            "type": "group"
+          }
+        },
+        "priority": "Medium",
+        "schema": {
+          "schemaId": "8f3a1c2e-4b6d-4e7a-9c1f-2d5b8a7e6f30",
+          "fields": [
+            {
+              "id": "employeeid",
+              "label": "Employee ID",
+              "type": "string",
+              "direction": "input",
+              "binding": "vars.start.output.employeeId"
+            },
+            {
+              "id": "amount",
+              "label": "Amount",
+              "type": "number",
+              "direction": "input",
+              "binding": "vars.start.output.amount"
+            },
+            {
+              "id": "category",
+              "label": "Category",
+              "type": "string",
+              "direction": "input",
+              "binding": "vars.start.output.category"
+            },
+            {
+              "id": "receipturl",
+              "label": "Receipt URL",
+              "type": "string",
+              "direction": "input",
+              "binding": "vars.start.output.receiptUrl"
+            },
+            {
+              "id": "reason",
+              "label": "Reason (required if rejecting)",
+              "type": "string",
+              "direction": "output",
+              "variable": "vars.rejectionReason"
+            }
+          ],
+          "outcomes": [
+            {
+              "id": "approve",
+              "name": "Approve",
+              "type": "string",
+              "isPrimary": true,
+              "action": "Continue"
+            },
+            {
+              "id": "reject",
+              "name": "Reject",
+              "type": "string",
+              "isPrimary": false,
+              "action": "End"
+            }
+          ]
+        }
+      },
+      "outputs": {
+        "output": {
+          "type": "object",
+          "description": "Task result data",
+          "source": "=result",
+          "var": "output",
+          "properties": {
+            "reason": {
+              "type": "string"
+            },
+            "Action": {
+              "type": "string",
+              "enum": [
+                "Approve",
+                "Reject"
+              ],
+              "default": "Approve"
+            }
+          }
+        },
+        "status": {
+          "type": "string",
+          "description": "Task completion status",
+          "source": "=result.Action",
+          "var": "status",
+          "enum": [
+            "Approve",
+            "Reject"
+          ],
+          "default": "Approve"
+        }
+      }
+    },
+    {
+      "id": "buildManagerDecision1",
+      "type": "core.action.script",
+      "typeVersion": "1.1",
+      "display": {
+        "label": "Build Manager Decision"
+      },
+      "inputs": {
+        "script": "const approved = $vars.managerApproval1.status === \"Approve\";\nconst rawReason = $vars.managerApproval1.output.reason;\nconst reason = approved ? (rawReason || \"Approved by manager\") : (rawReason || \"Rejected by manager (no reason provided)\");\nreturn { status: approved ? \"Approved\" : \"Rejected\", reason: reason };"
+      },
+      "outputs": {
+        "output": {
+          "type": "any",
+          "description": "The return value of the script",
+          "source": "=result.response",
+          "var": "output"
+        },
+        "error": {
+          "type": "object",
+          "description": "Error information if the node fails",
+          "source": "=Error",
+          "var": "error"
+        }
+      }
+    },
+    {
+      "id": "finalizeDecision1",
+      "type": "core.action.script",
+      "typeVersion": "1.1",
+      "display": {
+        "label": "Finalize Decision"
+      },
+      "inputs": {
+        "script": "const decision = $vars.autoApprove1.output || $vars.buildManagerDecision1.output || $vars.rejectInvalidInput1.output;\nreturn { status: decision.status, reason: decision.reason };"
+      },
+      "outputs": {
+        "output": {
+          "type": "any",
+          "description": "The return value of the script",
+          "source": "=result.response",
+          "var": "output"
+        },
+        "error": {
+          "type": "object",
+          "description": "Error information if the node fails",
+          "source": "=Error",
+          "var": "error"
+        }
+      }
+    },
+    {
+      "id": "end1",
+      "type": "core.control.end",
+      "typeVersion": "1.0",
+      "display": {
+        "label": "End"
+      },
+      "inputs": {},
+      "outputs": {
+        "finalStatus": {
+          "source": "=js:$vars.finalizeDecision1.output.status"
+        },
+        "finalReason": {
+          "source": "=js:$vars.finalizeDecision1.output.reason"
+        }
+      }
+    },
+    {
+      "id": "start",
+      "type": "core.trigger.manual",
+      "typeVersion": "1.0",
+      "display": {
+        "label": "Manual trigger"
+      },
+      "inputs": {
+        "entryPointId": "072265e1-1f4d-4ddd-9f35-547bcf950b30",
+        "isDefaultEntryPoint": true
+      }
+    },
+    {
+      "id": "logDecisionToFinance1",
+      "type": "core.action.http.v2",
+      "typeVersion": "2.3",
+      "display": {
+        "label": "Log Decision to Finance"
+      },
+      "inputs": {
+        "branches": [],
+        "timeout": "PT15M",
+        "retryCount": 0,
+        "detail": {
+          "connector": "uipath-uipath-http",
+          "connectionId": "ImplicitConnection",
+          "connectionResourceId": null,
+          "connectionFolderKey": null,
+          "method": "POST",
+          "endpoint": "/http-request",
+          "bodyParameters": {
+            "authentication": "manual",
+            "method": "POST",
+            "url": "https://mock-finance-api.example.com/api/expense-decisions",
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "instanceId": "=js:$metadata.instanceId",
+              "employeeId": "=js:$vars.start.output.employeeId",
+              "amount": "=js:$vars.start.output.amount",
+              "category": "=js:$vars.start.output.category",
+              "receiptUrl": "=js:$vars.start.output.receiptUrl",
+              "status": "=js:$vars.finalizeDecision1.output.status",
+              "reason": "=js:$vars.finalizeDecision1.output.reason"
+            }
+          },
+          "configuration": "=jsonString:{\"essentialConfiguration\":{\"connectorVersion\":\"1.4.50\",\"executionType\":null,\"customFieldsRequestDetails\":null,\"instanceParameters\":{\"connectorKey\":\"uipath-uipath-http\",\"objectName\":\"http-request\",\"httpMethod\":\"POST\",\"activityType\":\"Curated\",\"version\":\"1.0.0\"},\"objectName\":\"http-request\",\"operation\":\"create\",\"packageVersion\":\"1.0.0\",\"httpMethod\":\"POST\",\"path\":\"/http-request\",\"unifiedTypesCompatible\":true,\"savedJitInputFieldId\":\"in_http-request\"}}",
+          "uiPathActivityTypeId": "5c4cc855-b42a-37e6-b910-de8588998fce",
+          "errorState": {
+            "issues": []
+          },
+          "telemetryData": {
+            "connectorKey": "uipath-uipath-http",
+            "connectorName": "HTTP",
+            "operationType": "create",
+            "objectName": "http-request",
+            "objectDisplayName": "HTTP Request",
+            "primaryKeyName": ""
+          }
+        },
+        "errorHandlingEnabled": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-start-validateInput1",
+      "sourceNodeId": "start",
+      "sourcePort": "output",
+      "targetNodeId": "validateInput1",
+      "targetPort": "input"
+    },
+    {
+      "id": "e-validateInput1-checkInputValid1",
+      "sourceNodeId": "validateInput1",
+      "sourcePort": "success",
+      "targetNodeId": "checkInputValid1",
+      "targetPort": "input"
+    },
+    {
+      "id": "e-checkInputValid1-true-checkAutoApproval1",
+      "sourceNodeId": "checkInputValid1",
+      "sourcePort": "true",
+      "targetNodeId": "checkAutoApproval1",
+      "targetPort": "input"
+    },
+    {
+      "id": "e-checkInputValid1-false-rejectInvalidInput1",
+      "sourceNodeId": "checkInputValid1",
+      "sourcePort": "false",
+      "targetNodeId": "rejectInvalidInput1",
+      "targetPort": "input"
+    },
+    {
+      "id": "e-rejectInvalidInput1-finalizeDecision1",
+      "sourceNodeId": "rejectInvalidInput1",
+      "sourcePort": "success",
+      "targetNodeId": "finalizeDecision1",
+      "targetPort": "input"
+    },
+    {
+      "id": "e-logDecisionToFinance1-error-end1",
+      "sourceNodeId": "logDecisionToFinance1",
+      "sourcePort": "error",
+      "targetNodeId": "end1",
+      "targetPort": "input"
+    },
+    {
+      "id": "e-checkAutoApproval1-true-autoApprove1",
+      "sourceNodeId": "checkAutoApproval1",
+      "sourcePort": "true",
+      "targetNodeId": "autoApprove1",
+      "targetPort": "input"
+    },
+    {
+      "id": "e-checkAutoApproval1-false-managerApproval1",
+      "sourceNodeId": "checkAutoApproval1",
+      "sourcePort": "false",
+      "targetNodeId": "managerApproval1",
+      "targetPort": "input"
+    },
+    {
+      "id": "e-autoApprove1-finalizeDecision1",
+      "sourceNodeId": "autoApprove1",
+      "sourcePort": "success",
+      "targetNodeId": "finalizeDecision1",
+      "targetPort": "input"
+    },
+    {
+      "id": "e-managerApproval1-buildManagerDecision1",
+      "sourceNodeId": "managerApproval1",
+      "sourcePort": "completed",
+      "targetNodeId": "buildManagerDecision1",
+      "targetPort": "input"
+    },
+    {
+      "id": "e-buildManagerDecision1-finalizeDecision1",
+      "sourceNodeId": "buildManagerDecision1",
+      "sourcePort": "success",
+      "targetNodeId": "finalizeDecision1",
+      "targetPort": "input"
+    },
+    {
+      "id": "e-finalizeDecision1-logDecisionToFinance1",
+      "sourceNodeId": "finalizeDecision1",
+      "sourcePort": "success",
+      "targetNodeId": "logDecisionToFinance1",
+      "targetPort": "input"
+    },
+    {
+      "id": "e-logDecisionToFinance1-end1",
+      "sourceNodeId": "logDecisionToFinance1",
+      "sourcePort": "default",
+      "targetNodeId": "end1",
+      "targetPort": "input"
+    }
+  ],
+  "definitions": [
+    {
+      "nodeType": "core.logic.decision",
+      "version": "1.2",
+      "category": "control-flow",
+      "description": "Branch on a true or false condition",
+      "tags": [
+        "control-flow",
+        "if",
+        "loop",
+        "switch"
+      ],
+      "sortOrder": 21,
+      "display": {
+        "label": "Decision",
+        "icon": "trending-up-down"
+      },
+      "handleConfiguration": [
+        {
+          "position": "left",
+          "handles": [
+            {
+              "id": "input",
+              "type": "target",
+              "handleType": "input"
+            }
+          ],
+          "visible": true
+        },
+        {
+          "position": "right",
+          "handles": [
+            {
+              "id": "true",
+              "type": "source",
+              "handleType": "output",
+              "label": "{inputs.trueLabel}",
+              "constraints": {
+                "minConnections": 1
+              }
+            },
+            {
+              "id": "false",
+              "type": "source",
+              "handleType": "output",
+              "label": "{inputs.falseLabel}"
+            }
+          ],
+          "visible": true
+        }
+      ],
+      "debug": {
+        "runtime": "clientScript"
+      },
+      "model": {
+        "type": "bpmn:InclusiveGateway"
+      },
+      "inputDefinition": {
+        "type": "object",
+        "properties": {
+          "expression": {
+            "type": "string",
+            "minLength": 1,
+            "errorMessage": "Add a condition"
+          },
+          "trueLabel": {
+            "type": "string"
+          },
+          "falseLabel": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "expression"
+        ]
+      },
+      "outputDefinition": {
+        "matchedCase": {
+          "type": "string",
+          "description": "The label of the matched branch (true/false label)",
+          "var": "matchedCase"
+        },
+        "matchedCaseId": {
+          "type": "string",
+          "description": "The branch that was taken (true or false)",
+          "var": "matchedCaseId"
+        }
+      },
+      "inputDefaults": {
+        "trueLabel": "True",
+        "falseLabel": "False"
+      }
+    },
+    {
+      "nodeType": "core.action.script",
+      "version": "1.1",
+      "category": "data-operations",
+      "description": "Run custom JavaScript code",
+      "tags": [
+        "code",
+        "javascript",
+        "python"
+      ],
+      "sortOrder": 35,
+      "supportsErrorHandling": true,
+      "display": {
+        "label": "Script",
+        "icon": "code"
+      },
+      "handleConfiguration": [
+        {
+          "position": "left",
+          "handles": [
+            {
+              "id": "input",
+              "type": "target",
+              "handleType": "input"
+            }
+          ]
+        },
+        {
+          "position": "right",
+          "handles": [
+            {
+              "id": "success",
+              "type": "source",
+              "handleType": "output"
+            },
+            {
+              "id": "error",
+              "label": "Error",
+              "type": "source",
+              "handleType": "output",
+              "visible": "{inputs.errorHandlingEnabled}",
+              "constraints": {
+                "maxConnections": 1
+              }
+            }
+          ]
+        }
+      ],
+      "debug": {
+        "runtime": "clientScript"
+      },
+      "model": {
+        "type": "bpmn:ScriptTask"
+      },
+      "inputDefinition": {
+        "type": "object",
+        "properties": {
+          "script": {
+            "type": "string",
+            "minLength": 1,
+            "errorMessage": "Add a script function",
+            "validationSeverity": "warning"
+          }
+        },
+        "required": [
+          "script"
+        ]
+      },
+      "inputDefaults": {
+        "script": ""
+      },
+      "outputDefinition": {
+        "output": {
+          "type": "any",
+          "description": "The return value of the script",
+          "source": "=result.response",
+          "var": "output"
+        },
+        "error": {
+          "type": "object",
+          "description": "Error information if the node fails",
+          "source": "=Error",
+          "var": "error",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "detail",
+              "category",
+              "status"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Error code as a string"
+              },
+              "message": {
+                "type": "string",
+                "description": "High-level error message"
+              },
+              "detail": {
+                "type": "string",
+                "description": "Detailed error description"
+              },
+              "category": {
+                "type": "string",
+                "description": "Error category"
+              },
+              "status": {
+                "type": "integer",
+                "description": "HTTP status code"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "nodeType": "uipath.human-in-the-loop.quick-form",
+      "version": "1.0",
+      "category": "human-task",
+      "description": "Fast inline approvals with inline debug",
+      "tags": [
+        "human-task",
+        "hitl",
+        "human-in-the-loop",
+        "quick-form",
+        "approval"
+      ],
+      "sortOrder": 27,
+      "display": {
+        "label": "Quick Form",
+        "icon": "users",
+        "shape": "square"
+      },
+      "handleConfiguration": [
+        {
+          "position": "left",
+          "handles": [
+            {
+              "id": "input",
+              "type": "target",
+              "handleType": "input"
+            }
+          ],
+          "visible": true
+        },
+        {
+          "position": "right",
+          "handles": [
+            {
+              "id": "completed",
+              "label": "Completed",
+              "type": "source",
+              "handleType": "output",
+              "showButton": true,
+              "constraints": {
+                "forbiddenTargetCategories": [
+                  "trigger"
+                ]
+              }
+            }
+          ],
+          "visible": true
+        }
+      ],
+      "model": {
+        "type": "bpmn:UserTask",
+        "serviceType": "Actions.HITL"
+      },
+      "inputDefaults": {
+        "schema": {
+          "fields": [],
+          "outcomes": [
+            {
+              "id": "submit",
+              "name": "Submit",
+              "type": "string",
+              "isPrimary": true,
+              "action": "Continue"
+            }
+          ]
+        },
+        "recipient": {
+          "channels": [
+            "Email",
+            "ActionCenter"
+          ],
+          "connections": {},
+          "assignee": {
+            "type": "group"
+          }
+        }
+      },
+      "outputDefinition": {
+        "output": {
+          "type": "object",
+          "description": "Task result data",
+          "source": "=result",
+          "var": "output"
+        },
+        "status": {
+          "type": "string",
+          "description": "Task completion status",
+          "source": "=result.Action",
+          "var": "status"
+        }
+      }
+    },
+    {
+      "nodeType": "core.control.end",
+      "version": "1.0",
+      "category": "control-flow",
+      "description": "Mark the end of a process path",
+      "tags": [
+        "control-flow",
+        "end",
+        "finish",
+        "complete"
+      ],
+      "sortOrder": 20,
+      "display": {
+        "label": "End",
+        "icon": "circle-check",
+        "shape": "circle"
+      },
+      "handleConfiguration": [
+        {
+          "position": "left",
+          "handles": [
+            {
+              "id": "input",
+              "type": "target",
+              "handleType": "input"
+            }
+          ]
+        }
+      ],
+      "model": {
+        "type": "bpmn:EndEvent"
+      },
+      "runtimeConstraints": {
+        "exclude": [
+          "api-function"
+        ]
+      }
+    },
+    {
+      "nodeType": "core.trigger.manual",
+      "version": "1.0",
+      "category": "trigger",
+      "description": "Start the process manually",
+      "tags": [
+        "trigger",
+        "start",
+        "manual"
+      ],
+      "sortOrder": 40,
+      "display": {
+        "label": "Manual trigger",
+        "icon": "play",
+        "shape": "circle"
+      },
+      "handleConfiguration": [
+        {
+          "position": "right",
+          "handles": [
+            {
+              "id": "output",
+              "type": "source",
+              "handleType": "output",
+              "showButton": true,
+              "constraints": {
+                "forbiddenTargetCategories": [
+                  "trigger"
+                ]
+              }
+            }
+          ],
+          "visible": true
+        }
+      ],
+      "model": {
+        "type": "bpmn:StartEvent",
+        "entryPointId": true
+      },
+      "outputDefinition": {
+        "output": {
+          "type": "object",
+          "description": "Data passed when manually triggering the process.",
+          "source": "null",
+          "var": "output"
+        }
+      },
+      "toolbarExtensions": {
+        "design": {
+          "actions": [
+            {
+              "id": "change-trigger-type",
+              "icon": "square-mouse-pointer",
+              "label": "Change trigger type"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "nodeType": "core.action.http.v2",
+      "version": "2.3",
+      "category": "data-operations",
+      "description": "HTTP request with managed authentication",
+      "tags": [
+        "connector",
+        "http",
+        "api",
+        "rest",
+        "request"
+      ],
+      "sortOrder": 35,
+      "supportsErrorHandling": true,
+      "display": {
+        "label": "HTTP Request",
+        "icon": "app-window"
+      },
+      "handleConfiguration": [
+        {
+          "position": "left",
+          "handles": [
+            {
+              "id": "input",
+              "type": "target",
+              "handleType": "input",
+              "label": ""
+            }
+          ]
+        },
+        {
+          "position": "right",
+          "handles": [
+            {
+              "id": "branch-{item.id}",
+              "type": "source",
+              "handleType": "output",
+              "label": "{item.name}",
+              "repeat": "inputs.branches"
+            },
+            {
+              "id": "default",
+              "type": "source",
+              "handleType": "output",
+              "label": ""
+            },
+            {
+              "id": "error",
+              "label": "Error",
+              "type": "source",
+              "handleType": "output",
+              "visible": "{inputs.errorHandlingEnabled}",
+              "constraints": {
+                "maxConnections": 1
+              }
+            }
+          ],
+          "visible": true
+        }
+      ],
+      "debug": {
+        "runtime": "bpmnEngine"
+      },
+      "model": {
+        "type": "bpmn:ServiceTask",
+        "serviceType": "Intsvc.UnifiedHttpRequest",
+        "context": [
+          {
+            "name": "connectorKey",
+            "type": "string",
+            "value": "uipath-uipath-http"
+          },
+          {
+            "name": "objectName",
+            "type": "string",
+            "value": "http-request"
+          },
+          {
+            "name": "connection",
+            "type": "string",
+            "value": "<bindings.uipath-uipath-http connection>"
+          },
+          {
+            "name": "folderKey",
+            "type": "string",
+            "value": "<bindings.FolderKey>"
+          },
+          {
+            "name": "activityConfigurationVersion",
+            "type": "string",
+            "value": "v1"
+          },
+          {
+            "name": "metadata",
+            "body": {
+              "telemetryData": {
+                "connectorKey": "uipath-uipath-http",
+                "connectorName": "HTTP Request"
+              },
+              "inputMetadata": {},
+              "errorState": {
+                "hasError": true
+              }
+            },
+            "type": "json"
+          }
+        ],
+        "expansion": {
+          "processLevelVariables": [
+            {
+              "id": "{nodeId}.output",
+              "name": "output",
+              "type": "jsonSchema",
+              "elementId": "{nodeId}",
+              "custom": true
+            },
+            {
+              "condition": "hasEdgeFromHandle('error')",
+              "id": "{nodeId}.error",
+              "name": "error",
+              "type": "jsonSchema",
+              "elementId": "{nodeId}",
+              "custom": true
+            }
+          ],
+          "nodes": [
+            {
+              "id": "{nodeId}",
+              "type": "bpmn:SubProcess",
+              "replaceOriginal": true,
+              "data": {
+                "label": "{node.data.label}",
+                "isExpanded": true,
+                "model": {
+                  "serviceType": "BPMN.Variables",
+                  "subprocessVariables": {
+                    "inputOutputs": [
+                      {
+                        "id": "response",
+                        "name": "response",
+                        "type": "jsonSchema",
+                        "variableType": "inputOutput"
+                      },
+                      {
+                        "id": "error",
+                        "name": "error",
+                        "type": "jsonSchema",
+                        "variableType": "inputOutput"
+                      }
+                    ]
+                  },
+                  "outputs": [
+                    {
+                      "name": "output",
+                      "type": "jsonSchema",
+                      "source": "=vars.response",
+                      "var": "{nodeId}.output",
+                      "custom": true
+                    },
+                    {
+                      "name": "error",
+                      "type": "jsonSchema",
+                      "source": "=vars.error",
+                      "var": "{nodeId}.error",
+                      "custom": true
+                    }
+                  ]
+                }
+              },
+              "nodes": [
+                {
+                  "id": "_Implicit_StartEvent_{nodeId}",
+                  "type": "bpmn:StartEvent",
+                  "parentId": "{nodeId}",
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "data": {
+                    "label": "HTTP Request Start"
+                  }
+                },
+                {
+                  "id": "_Implicit_HttpTask_{nodeId}",
+                  "type": "bpmn:SendTask",
+                  "parentId": "{nodeId}",
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "propagate": {
+                    "detail": true,
+                    "retry": {
+                      "condition": "node.data.inputs.retryCount > 0",
+                      "maxRetryCount": "node.data.inputs.retryCount",
+                      "retryBackoff": "node.data.inputs.timeout",
+                      "retryBackoffDefault": "PT1S",
+                      "retryAllErrors": "true",
+                      "retryBackoffType": "Static"
+                    }
+                  },
+                  "data": {
+                    "label": "{node.data.label}",
+                    "model": {
+                      "serviceType": "Intsvc.UnifiedHttpRequest",
+                      "context": [
+                        {
+                          "name": "connectorKey",
+                          "type": "string",
+                          "value": "uipath-uipath-http"
+                        },
+                        {
+                          "name": "objectName",
+                          "type": "string",
+                          "value": "http-request"
+                        },
+                        {
+                          "name": "connection",
+                          "type": "string",
+                          "value": "<bindings.uipath-uipath-http connection>"
+                        },
+                        {
+                          "name": "folderKey",
+                          "type": "string",
+                          "value": "<bindings.FolderKey>"
+                        },
+                        {
+                          "name": "activityConfigurationVersion",
+                          "type": "string",
+                          "value": "v1"
+                        },
+                        {
+                          "name": "metadata",
+                          "body": {
+                            "telemetryData": {
+                              "connectorKey": "uipath-uipath-http",
+                              "connectorName": "HTTP Request"
+                            },
+                            "inputMetadata": {},
+                            "errorState": {
+                              "hasError": true
+                            }
+                          },
+                          "type": "json"
+                        }
+                      ],
+                      "outputs": [
+                        {
+                          "name": "response",
+                          "type": "json",
+                          "source": "=response",
+                          "var": "response",
+                          "internal": true
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "_Implicit_Gateway_{nodeId}",
+                  "type": "bpmn:ExclusiveGateway",
+                  "parentId": "{nodeId}",
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "condition": "node.data.inputs.branches.length > 0",
+                  "data": {
+                    "label": "Response branch",
+                    "defaultFlowId": "_Implicit_Edge__Implicit_Gateway_{nodeId}__Implicit_EndEvent_Default_{nodeId}"
+                  }
+                },
+                {
+                  "forEach": "node.data.inputs.branches",
+                  "id": "_Implicit_EndEvent_{branchName}_{nodeId}",
+                  "type": "bpmn:EndEvent",
+                  "parentId": "{nodeId}",
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "data": {
+                    "label": "{branch.name}"
+                  }
+                },
+                {
+                  "id": "_Implicit_EndEvent_Default_{nodeId}",
+                  "type": "bpmn:EndEvent",
+                  "parentId": "{nodeId}",
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "data": {
+                    "label": "Default"
+                  }
+                },
+                {
+                  "condition": "hasEdgeFromHandle('error')",
+                  "id": "_Implicit_EndEvent_Failure_{nodeId}",
+                  "type": "bpmn:EndEvent",
+                  "parentId": "{nodeId}",
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "data": {
+                    "label": "Failure",
+                    "model": {
+                      "serviceType": "BPMN.Variables",
+                      "outputs": [
+                        {
+                          "name": "error",
+                          "type": "boolean",
+                          "source": "=true",
+                          "var": "error",
+                          "internal": true
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "condition": "hasEdgeFromHandle('error')",
+                  "id": "_Implicit_BoundaryError_{nodeId}",
+                  "type": "bpmn:BoundaryEvent",
+                  "parentId": "{nodeId}",
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "data": {
+                    "label": "Error",
+                    "cancelActivity": false,
+                    "attachedToId": "_Implicit_HttpTask_{nodeId}",
+                    "eventDefinition": {
+                      "type": "bpmn:ErrorEventDefinition",
+                      "id": "_Implicit_BoundaryError_{nodeId}_Error"
+                    },
+                    "model": {
+                      "outputs": [
+                        {
+                          "name": "Error",
+                          "type": "jsonSchema",
+                          "source": "=Error",
+                          "var": "response",
+                          "internal": true
+                        }
+                      ]
+                    }
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "_Implicit_Edge__Implicit_StartEvent_{nodeId}__Implicit_HttpTask_{nodeId}",
+                  "source": "_Implicit_StartEvent_{nodeId}",
+                  "target": "_Implicit_HttpTask_{nodeId}",
+                  "type": "bpmn:SequenceFlow",
+                  "data": {}
+                },
+                {
+                  "condition": "node.data.inputs.branches.length === 0",
+                  "id": "_Implicit_Edge__Implicit_HttpTask_{nodeId}__Implicit_EndEvent_Default_{nodeId}",
+                  "source": "_Implicit_HttpTask_{nodeId}",
+                  "target": "_Implicit_EndEvent_Default_{nodeId}",
+                  "type": "bpmn:SequenceFlow",
+                  "data": {}
+                },
+                {
+                  "condition": "node.data.inputs.branches.length > 0",
+                  "id": "_Implicit_Edge__Implicit_HttpTask_{nodeId}__Implicit_Gateway_{nodeId}",
+                  "source": "_Implicit_HttpTask_{nodeId}",
+                  "target": "_Implicit_Gateway_{nodeId}",
+                  "type": "bpmn:SequenceFlow",
+                  "data": {}
+                },
+                {
+                  "forEach": "node.data.inputs.branches",
+                  "condition": "node.data.inputs.branches.length > 0",
+                  "id": "_Implicit_Edge__Implicit_Gateway_{nodeId}__Implicit_EndEvent_{branchName}_{nodeId}",
+                  "source": "_Implicit_Gateway_{nodeId}",
+                  "target": "_Implicit_EndEvent_{branchName}_{nodeId}",
+                  "type": "bpmn:SequenceFlow",
+                  "data": {
+                    "conditionExpression": "{branch.conditionExpression}",
+                    "label": "{branch.name}"
+                  }
+                },
+                {
+                  "condition": "node.data.inputs.branches.length > 0",
+                  "id": "_Implicit_Edge__Implicit_Gateway_{nodeId}__Implicit_EndEvent_Default_{nodeId}",
+                  "source": "_Implicit_Gateway_{nodeId}",
+                  "target": "_Implicit_EndEvent_Default_{nodeId}",
+                  "type": "bpmn:SequenceFlow",
+                  "data": {
+                    "label": "Default"
+                  }
+                },
+                {
+                  "condition": "hasEdgeFromHandle('error')",
+                  "id": "_Implicit_Edge__Implicit_BoundaryError_{nodeId}__Implicit_EndEvent_Failure_{nodeId}",
+                  "source": "_Implicit_BoundaryError_{nodeId}",
+                  "target": "_Implicit_EndEvent_Failure_{nodeId}",
+                  "type": "bpmn:SequenceFlow",
+                  "data": {}
+                }
+              ]
+            },
+            {
+              "id": "_Implicit_PostSubprocessGateway_{nodeId}",
+              "type": "bpmn:ExclusiveGateway",
+              "condition": "(node.data.inputs.branches.length > 0 || hasEdgeFromHandle('error')) && originalEdges.length > 0",
+              "parentId": null,
+              "position": {
+                "x": 0,
+                "y": 0
+              },
+              "data": {
+                "label": "Post-Subprocess Branch"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "condition": "(node.data.inputs.branches.length > 0 || hasEdgeFromHandle('error')) && originalEdges.length > 0",
+              "id": "_Implicit_Edge_{nodeId}__Implicit_PostSubprocessGateway_{nodeId}",
+              "source": "{nodeId}",
+              "target": "_Implicit_PostSubprocessGateway_{nodeId}",
+              "type": "bpmn:SequenceFlow",
+              "data": {}
+            },
+            {
+              "forEach": "node.data.inputs.branches",
+              "condition": "node.data.inputs.branches.length > 0",
+              "matchOriginalEdgeByHandle": "branch-{branch.id}",
+              "preserveEdgeId": true,
+              "source": "_Implicit_PostSubprocessGateway_{nodeId}",
+              "type": "bpmn:SequenceFlow",
+              "data": {
+                "conditionExpression": "{branch.conditionExpression}",
+                "label": "{branch.name}"
+              }
+            },
+            {
+              "condition": "node.data.inputs.branches.length > 0 || hasEdgeFromHandle('error')",
+              "matchOriginalEdgeByHandle": "default",
+              "preserveEdgeId": true,
+              "source": "_Implicit_PostSubprocessGateway_{nodeId}",
+              "type": "bpmn:SequenceFlow",
+              "data": {
+                "label": "Default"
+              }
+            },
+            {
+              "condition": "hasEdgeFromHandle('error')",
+              "matchOriginalEdgeByHandle": "error",
+              "preserveEdgeId": true,
+              "source": "_Implicit_PostSubprocessGateway_{nodeId}",
+              "type": "bpmn:SequenceFlow",
+              "data": {
+                "conditionExpression": "=js:vars.{nodeId}.error || vars.{nodeId}.output?.statusCode >= 400",
+                "label": "Error"
+              }
+            },
+            {
+              "condition": "node.data.inputs.branches.length === 0 && !hasEdgeFromHandle('error')",
+              "matchOriginalEdgeByHandle": "default",
+              "preserveEdgeId": true,
+              "source": "{nodeId}",
+              "type": "bpmn:SequenceFlow"
+            }
+          ]
+        }
+      },
+      "inputDefinition": {
+        "type": "object",
+        "properties": {
+          "branches": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "conditionExpression": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "timeout": {
+            "type": "string",
+            "pattern": "^P(?!$)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$",
+            "errorMessage": {
+              "pattern": "Timeout must be in ISO 8601 duration format (e.g., PT15M, PT1H, P1D)"
+            }
+          },
+          "retryCount": {
+            "type": "number"
+          }
+        }
+      },
+      "inputDefaults": {
+        "branches": [],
+        "timeout": "PT15M",
+        "retryCount": 0
+      },
+      "outputDefinition": {
+        "output": {
+          "type": "object",
+          "description": "HTTP response object",
+          "source": "=response",
+          "var": "output"
+        },
+        "error": {
+          "type": "object",
+          "description": "Error information if the node fails",
+          "source": "=Error",
+          "var": "error",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "detail",
+              "category",
+              "status"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Error code as a string"
+              },
+              "message": {
+                "type": "string",
+                "description": "High-level error message"
+              },
+              "detail": {
+                "type": "string",
+                "description": "Detailed error description"
+              },
+              "category": {
+                "type": "string",
+                "description": "Error category"
+              },
+              "status": {
+                "type": "integer",
+                "description": "HTTP status code"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "form": {
+        "id": "http-v2-properties",
+        "title": "HTTP Request",
+        "sections": [
+          {
+            "id": "http-config",
+            "title": "Configuration",
+            "collapsible": true,
+            "defaultExpanded": true,
+            "fields": [
+              {
+                "name": "inputs.dapHttpToolbar",
+                "type": "custom",
+                "component": "dap-http-toolbar",
+                "label": ""
+              },
+              {
+                "label": "",
+                "name": "inputs.detail",
+                "type": "custom",
+                "component": "dap-config",
+                "componentProps": {
+                  "connectorDetail": {
+                    "isAppActivity": false,
+                    "packageId": 196648,
+                    "svgIconUrl": "icons/0dad78c9d04c245b126d8edb4c451aa8a0d395d34731cf5702441f6284c70ccc.svg",
+                    "displayName": "HTTP Request",
+                    "assemblyQualifiedName": "UiPath.IntegrationService.Activities.Runtime.Activities.ConnectorActivity, UiPath.IntegrationService.Activities.Runtime, Version=1.22.0.0, Culture=neutral, PublicKeyToken=null",
+                    "description": "Use HTTP requests to interact with APIs via the selected connector and connection configuration.",
+                    "category": "",
+                    "activityColor": "#E56D5C",
+                    "configuration": "{\"connectorKey\":\"uipath-uipath-http\",\"objectName\":\"http-request\",\"httpMethod\":\"POST\",\"activityType\":\"Curated\",\"version\":\"1.0.0\"}",
+                    "uiPathActivityTypeId": "5c4cc855-b42a-37e6-b910-de8588998fce",
+                    "isExperimental": false,
+                    "helpUrlTemplate": "https://docs.uipath.com/{0}/activities/other/latest/integration-service/uipath-uipath-http-HTTP-Request",
+                    "isEnabled": true,
+                    "targetPlatform": "CrossPlatform",
+                    "isAdvanced": false,
+                    "isRestricted": false,
+                    "tags": [
+                      ""
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "branches",
+            "title": "Branches",
+            "collapsible": true,
+            "defaultExpanded": false,
+            "fields": [
+              {
+                "name": "inputs.branches",
+                "type": "custom",
+                "component": "http-branch-editor",
+                "label": "Response branches",
+                "description": "Define conditional branches based on response status or properties",
+                "componentProps": {
+                  "expressionValidationFields": [
+                    {
+                      "subPath": "conditionExpression",
+                      "validationMode": "expression",
+                      "expectedType": "boolean"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "advanced",
+            "title": "Advanced",
+            "collapsible": true,
+            "defaultExpanded": false,
+            "fields": [
+              {
+                "name": "inputs.timeout",
+                "type": "text",
+                "label": "Timeout",
+                "description": "ISO 8601 duration format (for example, PT15M for 15 minutes, PT1H for 1 hour)"
+              },
+              {
+                "name": "inputs.retryCount",
+                "type": "number",
+                "label": "Retry count",
+                "description": "Number of times to retry on failure"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "runtime": "maestro",
+  "variables": {
+    "globals": [
+      {
+        "id": "employeeId",
+        "direction": "in",
+        "type": "string",
+        "triggerNodeId": "start",
+        "description": "Employee submitting the expense"
+      },
+      {
+        "id": "amount",
+        "direction": "in",
+        "type": "number",
+        "triggerNodeId": "start",
+        "description": "Expense amount"
+      },
+      {
+        "id": "category",
+        "direction": "in",
+        "type": "string",
+        "triggerNodeId": "start",
+        "description": "Expense category"
+      },
+      {
+        "id": "receiptUrl",
+        "direction": "in",
+        "type": "string",
+        "triggerNodeId": "start",
+        "description": "Link to the receipt"
+      },
+      {
+        "id": "finalStatus",
+        "direction": "out",
+        "type": "string",
+        "description": "Approved or Rejected"
+      },
+      {
+        "id": "finalReason",
+        "direction": "out",
+        "type": "string",
+        "description": "Reason for the decision"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "validateInput1.output",
+        "type": "any",
+        "description": "The return value of the script",
+        "binding": {
+          "nodeId": "validateInput1",
+          "outputId": "output"
+        }
+      },
+      {
+        "id": "validateInput1.error",
+        "type": "object",
+        "description": "Error information if the node fails",
+        "binding": {
+          "nodeId": "validateInput1",
+          "outputId": "error"
+        }
+      },
+      {
+        "id": "checkInputValid1.matchedCase",
+        "type": "string",
+        "description": "The label of the matched branch (true/false label)",
+        "binding": {
+          "nodeId": "checkInputValid1",
+          "outputId": "matchedCase"
+        }
+      },
+      {
+        "id": "checkInputValid1.matchedCaseId",
+        "type": "string",
+        "description": "The branch that was taken (true or false)",
+        "binding": {
+          "nodeId": "checkInputValid1",
+          "outputId": "matchedCaseId"
+        }
+      },
+      {
+        "id": "rejectInvalidInput1.output",
+        "type": "any",
+        "description": "The return value of the script",
+        "binding": {
+          "nodeId": "rejectInvalidInput1",
+          "outputId": "output"
+        }
+      },
+      {
+        "id": "rejectInvalidInput1.error",
+        "type": "object",
+        "description": "Error information if the node fails",
+        "binding": {
+          "nodeId": "rejectInvalidInput1",
+          "outputId": "error"
+        }
+      },
+      {
+        "id": "checkAutoApproval1.matchedCase",
+        "type": "string",
+        "description": "The label of the matched branch (true/false label)",
+        "binding": {
+          "nodeId": "checkAutoApproval1",
+          "outputId": "matchedCase"
+        }
+      },
+      {
+        "id": "checkAutoApproval1.matchedCaseId",
+        "type": "string",
+        "description": "The branch that was taken (true or false)",
+        "binding": {
+          "nodeId": "checkAutoApproval1",
+          "outputId": "matchedCaseId"
+        }
+      },
+      {
+        "id": "autoApprove1.output",
+        "type": "any",
+        "description": "The return value of the script",
+        "binding": {
+          "nodeId": "autoApprove1",
+          "outputId": "output"
+        }
+      },
+      {
+        "id": "autoApprove1.error",
+        "type": "object",
+        "description": "Error information if the node fails",
+        "binding": {
+          "nodeId": "autoApprove1",
+          "outputId": "error"
+        }
+      },
+      {
+        "id": "managerApproval1.output",
+        "type": "object",
+        "description": "Task result data",
+        "binding": {
+          "nodeId": "managerApproval1",
+          "outputId": "output"
+        }
+      },
+      {
+        "id": "managerApproval1.status",
+        "type": "string",
+        "description": "Task completion status",
+        "binding": {
+          "nodeId": "managerApproval1",
+          "outputId": "status"
+        }
+      },
+      {
+        "id": "buildManagerDecision1.output",
+        "type": "any",
+        "description": "The return value of the script",
+        "binding": {
+          "nodeId": "buildManagerDecision1",
+          "outputId": "output"
+        }
+      },
+      {
+        "id": "buildManagerDecision1.error",
+        "type": "object",
+        "description": "Error information if the node fails",
+        "binding": {
+          "nodeId": "buildManagerDecision1",
+          "outputId": "error"
+        }
+      },
+      {
+        "id": "finalizeDecision1.output",
+        "type": "any",
+        "description": "The return value of the script",
+        "binding": {
+          "nodeId": "finalizeDecision1",
+          "outputId": "output"
+        }
+      },
+      {
+        "id": "finalizeDecision1.error",
+        "type": "object",
+        "description": "Error information if the node fails",
+        "binding": {
+          "nodeId": "finalizeDecision1",
+          "outputId": "error"
+        }
+      },
+      {
+        "id": "end1.finalStatus",
+        "type": "string",
+        "binding": {
+          "nodeId": "end1",
+          "outputId": "finalStatus"
+        }
+      },
+      {
+        "id": "end1.finalReason",
+        "type": "string",
+        "binding": {
+          "nodeId": "end1",
+          "outputId": "finalReason"
+        }
+      },
+      {
+        "id": "start.output",
+        "type": "object",
+        "description": "Data passed when manually triggering the process.",
+        "binding": {
+          "nodeId": "start",
+          "outputId": "output"
+        }
+      },
+      {
+        "id": "logDecisionToFinance1.output",
+        "type": "object",
+        "description": "HTTP response object",
+        "binding": {
+          "nodeId": "logDecisionToFinance1",
+          "outputId": "output"
+        }
+      },
+      {
+        "id": "logDecisionToFinance1.error",
+        "type": "object",
+        "description": "Error information if the node fails",
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "detail",
+            "category",
+            "status"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "description": "Error code as a string"
+            },
+            "message": {
+              "type": "string",
+              "description": "High-level error message"
+            },
+            "detail": {
+              "type": "string",
+              "description": "Detailed error description"
+            },
+            "category": {
+              "type": "string",
+              "description": "Error category"
+            },
+            "status": {
+              "type": "integer",
+              "description": "HTTP status code"
+            }
+          },
+          "additionalProperties": false
+        },
+        "binding": {
+          "nodeId": "logDecisionToFinance1",
+          "outputId": "error"
+        }
+      }
+    ]
+  },
+  "bindings": [
+    {
+      "id": "b6PEileQw",
+      "name": "uipath-uipath-http connection",
+      "type": "string",
+      "resource": "connection",
+      "resourceKey": "",
+      "default": "ImplicitConnection",
+      "propertyAttribute": "ConnectionId"
+    },
+    {
+      "id": "bozWDTwXs",
+      "name": "FolderKey",
+      "type": "string",
+      "resource": "connection",
+      "resourceKey": "",
+      "propertyAttribute": "FolderKey"
+    }
+  ],
+  "layout": {
+    "nodes": {
+      "validateInput1": {
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "size": {
+          "width": 96,
+          "height": 96
+        },
+        "collapsed": false
+      },
+      "checkInputValid1": {
+        "position": {
+          "x": 192,
+          "y": 0
+        },
+        "size": {
+          "width": 96,
+          "height": 96
+        },
+        "collapsed": false
+      },
+      "rejectInvalidInput1": {
+        "position": {
+          "x": 384,
+          "y": 96
+        },
+        "size": {
+          "width": 96,
+          "height": 96
+        },
+        "collapsed": false
+      },
+      "checkAutoApproval1": {
+        "position": {
+          "x": 384,
+          "y": -96
+        },
+        "size": {
+          "width": 96,
+          "height": 96
+        },
+        "collapsed": false
+      },
+      "autoApprove1": {
+        "position": {
+          "x": 576,
+          "y": -192
+        },
+        "size": {
+          "width": 96,
+          "height": 96
+        },
+        "collapsed": false
+      },
+      "managerApproval1": {
+        "position": {
+          "x": 576,
+          "y": 0
+        },
+        "size": {
+          "width": 96,
+          "height": 96
+        },
+        "collapsed": false
+      },
+      "buildManagerDecision1": {
+        "position": {
+          "x": 768,
+          "y": 0
+        },
+        "size": {
+          "width": 96,
+          "height": 96
+        },
+        "collapsed": false
+      },
+      "finalizeDecision1": {
+        "position": {
+          "x": 768,
+          "y": -192
+        },
+        "size": {
+          "width": 96,
+          "height": 96
+        },
+        "collapsed": false
+      },
+      "end1": {
+        "position": {
+          "x": 1152,
+          "y": -192
+        },
+        "size": {
+          "width": 96,
+          "height": 96
+        },
+        "collapsed": false
+      },
+      "start": {
+        "position": {
+          "x": -192,
+          "y": 0
+        },
+        "size": {
+          "width": 96,
+          "height": 96
+        }
+      },
+      "logDecisionToFinance1": {
+        "position": {
+          "x": 960,
+          "y": -192
+        },
+        "size": {
+          "width": 96,
+          "height": 96
+        }
+      }
+    }
+  }
+}

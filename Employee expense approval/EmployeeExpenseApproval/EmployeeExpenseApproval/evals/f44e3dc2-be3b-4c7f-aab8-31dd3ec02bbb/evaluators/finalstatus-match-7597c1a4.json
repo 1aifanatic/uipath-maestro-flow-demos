@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "id": "finalstatus-match-7597c1a4",
+  "name": "finalStatus-match",
+  "description": "finalStatus-match evaluator",
+  "evaluatorTypeId": "uipath-exact-match",
+  "evaluatorConfig": {
+    "name": "finalStatus-match",
+    "caseSensitive": false,
+    "negated": false,
+    "targetOutputKey": "finalStatus"
+  },
+  "fileName": "finalstatus-match-7597c1a4.json",
+  "createdAt": "2026-09-07T03:09:22.013Z",
+  "updatedAt": "2026-09-07T03:09:22.013Z"
+}

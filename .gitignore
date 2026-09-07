@@ -1,0 +1,14 @@
+# Ignore raw uncompressed video footage (>100MB)
+**/Part 1.mp4
+*.raw.mp4
+
+# UiPath build & package outputs
+out/
+bin/
+obj/
+.local/
+.settings/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
