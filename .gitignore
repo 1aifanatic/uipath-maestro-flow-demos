@@ -1,6 +1,9 @@
-# Ignore raw uncompressed video footage (>100MB)
-**/Part 1.mp4
-*.raw.mp4
+# Media & demo videos (kept out of git tree to save space; hosted via GitHub Releases)
+*.mp4
+*.wav
+*.avi
+*.mov
+**/video/
 
 # UiPath build & package outputs
 out/
